@@ -1,0 +1,62 @@
+version: "3.7"
+
+x-networks: &networks
+  networks:
+    - whoami
+
+services:
+
+  traefik:
+    image: traefik:v2.3
+    container_name: traefik_${PROJECT_NAME}
+    command:
+      - --providers.docker.network=${PROJECT_NAME}
+    ports:
+      - "80:80"
+      - "8080:8080"
+      - "443:443"
+    depends_on:
+      - docker-certs-tls
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik/traefik.toml:/etc/traefik/traefik.toml:ro
+      - ./traefik/dynamic-conf.toml:/etc/traefik/dynamic-conf.toml:ro
+      # Map certificates in dev-certs container
+      - docker_certs:/certs:ro
+    <<: *networks
+
+  whoami:
+    image: containous/whoami
+    container_name: whoami_${PROJECT_NAME}
+    expose:
+      - "80"
+    <<: *networks
+    labels:
+      # Tell Traefik to expose this container
+      - traefik.enable=true
+      # URL HTTP
+      - traefik.http.routers.whoami-http-${PROJECT_NAME}.rule=Host(`whoami.${DOMAIN_NAME}`)
+      # URL HTTPS
+      - traefik.http.routers.whoami-https-${PROJECT_NAME}.rule=Host(`whoami.${DOMAIN_NAME}`)
+      # HTTP entrypoint
+      - traefik.http.routers.whoami-http-${PROJECT_NAME}.entrypoints=web
+      # HTTPS entrypoint
+      - traefik.http.routers.whoami-https-${PROJECT_NAME}.entrypoints=web-secure
+      # TLS activation
+      - traefik.http.routers.whoami-https-${PROJECT_NAME}.tls=true
+      # HTTP to HTTPS Redirect
+      - traefik.http.routers.whoami-http-${PROJECT_NAME}.middlewares=redirect@file
+
+  docker-certs-tls:
+    build:
+      context: ./docker-certs/tls
+    container_name: docker_certs_tls_${PROJECT_NAME}
+    volumes:
+      - docker_certs:/certs:rw
+
+volumes:
+  docker_certs: {}
+
+networks:
+  whoami:
+    external: true

@@ -1,0 +1,32 @@
+# Configuration statique
+
+[global]
+  sendAnonymousUsage = false
+
+[log]
+  level = "INFO" #DEBUG, INFO, WARN, ERROR, FATAL, PANIC
+  format = "common"
+
+[providers.docker]
+  endpoint = "unix:///var/run/docker.sock"
+  watch = true
+  exposedByDefault = false
+  [docker.tls]
+    cert = "/certs/local-cert.pem"
+    key = "/certs/local-key.pem"
+
+[api]
+  insecure = true
+  dashboard = true
+  debug = true
+
+[entryPoints]
+  [entryPoints.web]
+    address = ":80"
+  [entryPoints.web-secure]
+    address = ":443"
+
+[providers]
+  [providers.file]
+    filename = "/etc/traefik/dynamic-conf.toml"
+    watch = true

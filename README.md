@@ -1,0 +1,51 @@
+# Traefik + TLS
+
+This is a template I've done but I was heavily inspired by other repos. This allows you to use Traefik as a reverse proxy. You have to declare a local domain and several subdomains for each of your service in the docker-compose file.
+If you are using portainer, declare the host as portainer + the selected domain name. 
+The most interesting part is that you can use many services with the same port. Traefik will redirect the trafic to the service called by its subdomain.
+Be aware that Traefik creates its own network.
+
+## Benefits
+
+- Don't touch your /etc/hosts file
+- Get a trusted certificate, generate certificates automatically inside a container and share these certificates inside a volume
+- Use a intelligent reverse proxy that get automatically updated when containers are destroyed or down.
+
+## Install and configuration
+
+Edit .env file.
+DOMAIN_NAME is the domain you are using. Mine is docker.localhost
+PROJECT_NAME is the main project name and it is appended to your container names. 
+Keep the network name the same as the project name.
+
+Edit ./docker-certs/tls/Dockerfile
+Add into the run command the domains you whould like to generate the certificates for.
+
+## Make certs manually
+
+It is also possible but comment the "docker-certs-tls" service in the docker-compse.yaml file.
+
+```
+$ mkcert -cert-file certs/local-cert.pem -key-file certs/local-key.pem "docker.localhost" "*.docker.localhost"
+```
+
+### Launch
+
+Go to the directory where the Make file is located and launch:
+
+```
+$ make network
+$ make install
+```
+
+You can also destroy at the end all containers with:
+
+```
+$ make uninstall
+```
+
+## Resources
+
+- https://github.com/DoTheEvo/Traefik-v2-examples
+- https://github.com/herveGuigoz/base-ApiPlatform-2.5.3---NuxtJs---Traefik.io
+- https://github.com/Heziode/traefik-v2-https-ssl-localhost
