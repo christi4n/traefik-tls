@@ -2,7 +2,7 @@ version: "3.7"
 
 x-networks: &networks
   networks:
-    - whoami
+    - cms
 
 services:
 
@@ -25,9 +25,11 @@ services:
       - docker_certs:/certs:ro
     <<: *networks
 
-  whoami:
-    image: containous/whoami
-    container_name: whoami_${PROJECT_NAME}
+  typo3:
+    image: martinhelmich/typo3:10.4
+    container_name: typo3_${PROJECT_NAME}
+    links:
+      - mariadb
     expose:
       - "80"
     <<: *networks
@@ -35,17 +37,78 @@ services:
       # Tell Traefik to expose this container
       - traefik.enable=true
       # URL HTTP
-      - traefik.http.routers.whoami-http-${PROJECT_NAME}.rule=Host(`whoami.${DOMAIN_NAME}`)
+      - traefik.http.routers.typo3-http-${PROJECT_NAME}.rule=Host(`typo3.${DOMAIN_NAME}`)
       # URL HTTPS
-      - traefik.http.routers.whoami-https-${PROJECT_NAME}.rule=Host(`whoami.${DOMAIN_NAME}`)
+      - traefik.http.routers.typo3-https-${PROJECT_NAME}.rule=Host(`typo3.${DOMAIN_NAME}`)
       # HTTP entrypoint
-      - traefik.http.routers.whoami-http-${PROJECT_NAME}.entrypoints=web
+      - traefik.http.routers.typo3-http-${PROJECT_NAME}.entrypoints=web
       # HTTPS entrypoint
-      - traefik.http.routers.whoami-https-${PROJECT_NAME}.entrypoints=web-secure
+      - traefik.http.routers.typo3-https-${PROJECT_NAME}.entrypoints=web-secure
       # TLS activation
-      - traefik.http.routers.whoami-https-${PROJECT_NAME}.tls=true
+      - traefik.http.routers.typo3-https-${PROJECT_NAME}.tls=true
       # HTTP to HTTPS Redirect
-      - traefik.http.routers.whoami-http-${PROJECT_NAME}.middlewares=redirect@file
+      - traefik.http.routers.typo3-http-${PROJECT_NAME}.middlewares=redirect@file
+
+  mariadb:
+    image: mariadb:10.5
+    container_name: mariadb_${PROJECT_NAME}
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+    volumes:
+      - mariadb:/var/lib/mysql
+    <<: *networks
+    ports:
+      - 13306:3306
+
+  adminer:
+    image: adminer:4.7
+    container_name: adminer_${PROJECT_NAME}
+    restart: always
+    expose:
+      - "8080"
+    depends_on:
+      - mariadb
+    <<: *networks
+    labels:
+    # Explicitly tell Traefik to expose this container
+    - traefik.enable=true
+    # URL HTTP
+    - traefik.http.routers.adminer-http-${PROJECT_NAME}.rule=Host(`adminer.${DOMAIN_NAME}`)
+    # URL HTTPS
+    - traefik.http.routers.adminer-https-${PROJECT_NAME}.rule=Host(`adminer.${DOMAIN_NAME}`)
+    # Point d'entré web (http)
+    - traefik.http.routers.adminer-http-${PROJECT_NAME}.entrypoints=web
+    # Point d'entré web-secure (https)
+    - traefik.http.routers.adminer-https-${PROJECT_NAME}.entrypoints=web-secure
+    # Activation de TLS
+    - traefik.http.routers.adminer-https-${PROJECT_NAME}.tls=true
+    # HTTP to HTTPS Redirection
+    - traefik.http.routers.adminer-http-${PROJECT_NAME}.middlewares=redirect@file
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog_${PROJECT_NAME}
+    expose:
+      - "8025"
+    <<: *networks
+    labels:
+    # Explicitly tell Traefik to expose this container
+    - traefik.enable=true
+    # URL HTTP
+    - traefik.http.routers.mailhog-http-${PROJECT_NAME}.rule=Host(`mailhog.${DOMAIN_NAME}`)
+    # URL HTTPS
+    - traefik.http.routers.mailhog-https-${PROJECT_NAME}.rule=Host(`mailhog.${DOMAIN_NAME}`)
+    # Point d'entré web (http)
+    - traefik.http.routers.mailhog-http-${PROJECT_NAME}.entrypoints=web
+    # Point d'entré web-secure (https)
+    - traefik.http.routers.mailhog-https-${PROJECT_NAME}.entrypoints=web-secure
+    # Activation de TLS
+    - traefik.http.routers.mailhog-https-${PROJECT_NAME}.tls=true
+    # HTTP to HTTPS Redirection
+    - traefik.http.routers.mailhog-http-${PROJECT_NAME}.middlewares=redirect@file
 
   docker-certs-tls:
     build:
@@ -56,7 +119,8 @@ services:
 
 volumes:
   docker_certs: {}
+  mariadb: {}
 
 networks:
-  whoami:
+  cms:
     external: true
