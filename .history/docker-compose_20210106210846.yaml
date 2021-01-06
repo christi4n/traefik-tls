@@ -7,7 +7,7 @@ x-networks: &networks
 services:
 
   traefik:
-    image: traefik:v2.3.6
+    image: traefik:v2.3
     container_name: traefik_${PROJECT_NAME}
     command:
       - --providers.docker.network=${PROJECT_NAME}
